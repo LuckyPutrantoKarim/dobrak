@@ -1,1 +1,80 @@
-print('test')
+
+import pandas as pd 
+import numpy as np
+
+df = pd.read_csv('movie_metadata.csv')
+
+C = df['imdb_score'].mean()
+print(C)
+m= df['num_user_for_reviews'].quantile(0.9)
+print(m)
+q_movies = df.copy().loc[df['num_user_for_reviews'] >= m]
+print(q_movies.shape)
+def A(x, m=m, C=C):
+    v = x['num_user_for_reviews']
+    R = x['imdb_score']
+    return (v/(v+m) * R) + (m/(m+v) * C)
+
+q_movies['score'] = q_movies.apply(A, axis=1)
+
+q_movies = q_movies.sort_values('score', ascending=False)
+
+q_movies[['movie_title', 'num_user_for_reviews', 'imdb_score', 'score']].head(10)
+pop= df.sort_values('num_user_for_reviews', ascending=False)
+import matplotlib.pyplot as plt
+plt.figure(figsize=(12,4))
+
+plt.barh(pop['movie_title'].head(6),pop['num_user_for_reviews'].head(6), align='center',
+        color='skyblue')
+plt.gca().invert_yaxis()
+plt.xlabel("Popularity")
+plt.title("Popular Movies")
+
+df['plot_keywords']
+#Import TfIdfVectorizer from scikit-learn
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+#Define a TF-IDF Vectorizer Object. Remove all english stop words such as 'the', 'a'
+tfidf = TfidfVectorizer(stop_words='english')
+
+#Replace NaN with an empty string
+df['plot_keywords'] = df['plot_keywords'].fillna('')
+
+#Construct the required TF-IDF matrix by fitting and transforming the data
+tfidf_matrix = tfidf.fit_transform(df['plot_keywords'])
+
+#Output the shape of tfidf_matrix
+print(tfidf_matrix.shape)
+
+from sklearn.metrics.pairwise import linear_kernel
+
+cosine_sim = linear_kernel(tfidf_matrix, tfidf_matrix)
+#------------------------------------------------------------------------------------------------
+indices = pd.Series(df.index, index=df['movie_title']).drop_duplicates()
+#------------------------------------------------------------------------------------------------
+
+def get_recommendations(movie_title, cosine_sim=cosine_sim ):
+    
+  #to get index from movie_title
+    idx = indices[movie_title]
+    
+    sim_scores = list(enumerate(cosine_sim[idx]))
+    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
+    sim_scores = sim_scores[1:11]
+    movie_indices = [i[0] for i in sim_scores]
+    return  df['movie_title'].iloc[movie_indices]
+
+z= df['movie_title'].values.tolist()
+# name = 'Batman v Superman: Dawn of Justice\xa0'
+firstname= 'Batman' 
+lastname= "\xa0"
+fullname = firstname   + lastname
+print(fullname)
+index = z.index(fullname)
+a = get_recommendations(index)
+print(index)
+#a is recommended film based on input
+print(a)
+
+
+
